@@ -148,7 +148,7 @@ class Libsyn extends MediaTypeBase {
           }
 
           // Extract the id from the src.
-          preg_match('/\/episode\/\/id(\d*)/', urldecode($src_matches[1]), $matches);
+          preg_match('/\/episode\/id\/(\d*)/', urldecode($src_matches[1]), $matches);
           if (!count($matches)) {
             return FALSE;
           }
@@ -235,6 +235,7 @@ class Libsyn extends MediaTypeBase {
         $property = $node->getAttribute('property');
         if ($property == 'og:image') {
           $this->libsyn['thumbnail_url'] = $node->getAttribute('content');
+          $this->libsyn['thumbnail_url'] = str_replace("http://", "https://", $this->libsyn['thumbnail_url']);
         }
       }
     }

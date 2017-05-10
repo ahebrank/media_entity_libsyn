@@ -28,7 +28,7 @@ class LibsynEmbedFormatter extends FormatterBase {
     return array(
         'width' => '700',
         'height' => '90',
-        'custom-color' => '87A93A',
+        'custom_color' => '87A93A',
         'theme' => 'custom', // ?
         'direction' => 'forward', // ?
         'options' => [],
@@ -75,10 +75,10 @@ class LibsynEmbedFormatter extends FormatterBase {
       '#description' => $this->t('Direction'),
     ];
 
-    $elements['custom-color'] = [
+    $elements['custom_color'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Custom color'),
-      '#default_value' => $this->getSetting('custom-color'),
+      '#default_value' => $this->getSetting('custom_color'),
       '#required' => TRUE,
       '#description' => $this->t('Custom color (6-character hex code)'),
     ];
@@ -133,8 +133,8 @@ class LibsynEmbedFormatter extends FormatterBase {
             '#episode_id' => $episode_id,
             '#width' => $this->getSetting('width'),
             '#height' => $this->getSetting('height'),
-            '#theme' => $this->getSetting('theme'),
-            '#custom-color' => $this->getSetting('custom-color'),
+            '#embed_theme' => $this->getSetting('theme'),
+            '#custom_color' => $this->getSetting('custom_color'),
             '#direction' => $this->getSetting('direction'),
             '#options' => $this->getSetting('options'),
           ];
@@ -157,7 +157,7 @@ class LibsynEmbedFormatter extends FormatterBase {
       'autoplay' => $this->t('Autoplay'),
       'preload' => $this->t('Preload'),
       'no_addthis' => $this->t('No Addthis'),
-      'render-playlist' => $this->t('Render playlist'),
+      'render_playlist' => $this->t('Render playlist'),
     ];
   }
 }
