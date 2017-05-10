@@ -12,6 +12,7 @@ use Drupal\media_entity\MediaInterface;
 use Drupal\media_entity\MediaTypeBase;
 use GuzzleHttp\ClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use \DOMDocument;
 
 /**
  * Provides media type plugin for Libsyn.
@@ -119,7 +120,7 @@ class Libsyn extends MediaTypeBase {
    * @inheritDoc
    */
   public function getField(MediaInterface $media, $name) {
-    if (($url = $this->getMediaUrl($media)) && ($data = $this->oEmbed($url))) {
+    if (($url = $this->getMediaUrl($media)) && ($data = $this->getData($url))) {
       switch ($name) {
         case 'html':
           return $data['html'];
@@ -198,5 +199,46 @@ class Libsyn extends MediaTypeBase {
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Returns oembed data for a Soundcloud url.
+   *
+   * @param string $url
+   *   The Libsyn Url.
+   *
+   * @return array
+   *  An array of embed data.
+   */
+  protected function getData($url) {
+    $this->libsyn = &drupal_static(__FUNCTION__);
+
+    if (!isset($this->libsyn)) {
+      $response = $this->httpClient->get($url);
+      $data = (string) $response->getBody();
+
+      $dom = new DOMDocument();
+      $dom->loadHTML($data);
+      
+      // search for the embed
+      $nodes = $dom->getElementsByTagName('iframe');
+      foreach ($nodes as $node) {
+        $src = $node->getAttribute('src');
+        if (strpos($src, 'player.libsyn.com') !== FALSE) {
+          $this->libsyn['html'] = $dom->saveHTML($node);
+        }
+      }
+
+      // thumbnail
+      $nodes = $dom->getElementsByTagName('meta');
+      foreach ($nodes as $node) {
+        $property = $node->getAttribute('property');
+        if ($property == 'og:image') {
+          $this->libsyn['thumbnail_url'] = $node->getAttribute('content');
+        }
+      }
+    }
+
+    return $this->libsyn;
   }
 }
