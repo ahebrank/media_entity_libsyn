@@ -12,7 +12,7 @@ use Drupal\media_entity\MediaInterface;
 use Drupal\media_entity\MediaTypeBase;
 use GuzzleHttp\ClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use \DOMDocument;
+use DOMDocument;
 
 /**
  * Provides media type plugin for Libsyn.
@@ -26,22 +26,28 @@ use \DOMDocument;
 class Libsyn extends MediaTypeBase {
 
   /**
+   * Libsyn data.
+   *
    * @var array
    */
   protected $libsyn;
 
   /**
+   * Config factory.
+   *
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
   protected $configFactory;
 
   /**
+   * Http client.
+   *
    * @var \GuzzleHttp\ClientInterface
    */
   protected $httpClient;
 
   /**
-   * @inheritDoc
+   * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $configFactory, ClientInterface $httpClient) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $configFactory->get('media_entity.settings'));
@@ -117,13 +123,14 @@ class Libsyn extends MediaTypeBase {
   }
 
   /**
-   * @inheritDoc
+   * {@inheritdoc}
    */
   public function getField(MediaInterface $media, $name) {
     if (($url = $this->getMediaUrl($media)) && ($data = $this->getData($url))) {
       switch ($name) {
         case 'html':
           return $data['html'];
+
         case 'thumbnail_uri':
           if (isset($data['thumbnail_url'])) {
             $destination = $this->configFactory->get('media_entity_libsyn.settings')->get('thumbnail_destination');
@@ -140,6 +147,7 @@ class Libsyn extends MediaTypeBase {
             }
           }
           return FALSE;
+
         case 'episode_id':
           // Extract the src attribute from the html code.
           preg_match('/src="([^"]+)"/', $data['html'], $src_matches);
@@ -182,10 +190,10 @@ class Libsyn extends MediaTypeBase {
    * Returns the episode id from the source_url_field.
    *
    * @param \Drupal\media_entity\MediaInterface $media
-   *  The media entity.
+   *   The media entity.
    *
    * @return string|bool
-   *  The episode if from the source_url_field if found. False otherwise.
+   *   The episode if from the source_url_field if found. False otherwise.
    */
   protected function getMediaUrl(MediaInterface $media) {
     if (isset($this->configuration['source_url_field'])) {
@@ -208,7 +216,7 @@ class Libsyn extends MediaTypeBase {
    *   The Libsyn Url.
    *
    * @return array
-   *  An array of embed data.
+   *   An array of embed data.
    */
   protected function getData($url) {
     $this->libsyn = &drupal_static(__FUNCTION__);
@@ -218,9 +226,9 @@ class Libsyn extends MediaTypeBase {
       $data = (string) $response->getBody();
 
       $dom = new DOMDocument();
-      $dom->loadHTML($data);
-      
-      // search for the embed
+      $dom->loadHTML($data, LIBXML_NOERROR);
+
+      // Search for the embed.
       $nodes = $dom->getElementsByTagName('iframe');
       foreach ($nodes as $node) {
         $src = $node->getAttribute('src');
@@ -229,7 +237,7 @@ class Libsyn extends MediaTypeBase {
         }
       }
 
-      // thumbnail
+      // Thumbnail.
       $nodes = $dom->getElementsByTagName('meta');
       foreach ($nodes as $node) {
         $property = $node->getAttribute('property');
@@ -242,4 +250,5 @@ class Libsyn extends MediaTypeBase {
 
     return $this->libsyn;
   }
+
 }
