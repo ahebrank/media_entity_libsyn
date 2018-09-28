@@ -22,21 +22,21 @@ use Drupal\media_entity_libsyn\Plugin\MediaEntity\Type\Libsyn;
 class LibsynEmbedFormatter extends FormatterBase {
 
   /**
-   * @inheritDoc
+   * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return array(
-        'width' => '700',
-        'height' => '90',
-        'custom_color' => '87A93A',
-        'theme' => 'custom', // ?
-        'direction' => 'forward', // ?
-        'options' => [],
-      ) + parent::defaultSettings();
+    return [
+      'width' => '700px',
+      'height' => '90px',
+      'custom_color' => '87A93A',
+      'theme' => 'custom',
+      'direction' => 'forward',
+      'options' => [],
+    ] + parent::defaultSettings();
   }
 
   /**
-   * @inheritDoc
+   * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     $elements = parent::settingsForm($form, $form_state);
@@ -47,7 +47,8 @@ class LibsynEmbedFormatter extends FormatterBase {
       '#default_value' => $this->getSetting('width'),
       '#min' => 1,
       '#required' => TRUE,
-      '#description' => $this->t('Width of embedded player. Suggested value: 700'),
+      '#description' => $this->t('Width of embedded player (including unit of measure). Suggested value: 700px'),
+      '#element_validate' => [[$this, 'validateDimension']],
     ];
 
     $elements['height'] = [
@@ -56,7 +57,8 @@ class LibsynEmbedFormatter extends FormatterBase {
       '#default_value' => $this->getSetting('height'),
       '#min' => 1,
       '#required' => TRUE,
-      '#description' => $this->t('Height of embedded player. Suggested value: 90'),
+      '#description' => $this->t('Height of embedded player (including unit of measure). Suggested value: 90px'),
+      '#element_validate' => [[$this, 'validateDimension']],
     ];
 
     $elements['theme'] = [
@@ -94,6 +96,21 @@ class LibsynEmbedFormatter extends FormatterBase {
   }
 
   /**
+   * Custom dimension validator method.
+   *
+   * @param array $element
+   *   Form element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state.
+   */
+  public function validateDimension(array $element, FormStateInterface $form_state) {
+    $value = $element['#value'];
+    if (is_numeric($value)) {
+      $form_state->setError($element, $this->t('Dimension must include unit of measure. E.g., "90<em>px</em>" or "100<em>%</em>"'));
+    }
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
@@ -125,7 +142,7 @@ class LibsynEmbedFormatter extends FormatterBase {
 
     $element = [];
     if (($type = $media_entity->getType()) && $type instanceof Libsyn) {
-      /** @var MediaTypeInterface $item */
+      /** @var \Drupal\media_entity\MediaTypeInterface $item */
       foreach ($items as $delta => $item) {
         if ($episode_id = $type->getField($media_entity, 'episode_id')) {
           $element[$delta] = [
@@ -149,6 +166,7 @@ class LibsynEmbedFormatter extends FormatterBase {
    * Returns an array of options for the embedded player.
    *
    * @return array
+   *   Embed options.
    */
   protected function getEmbedOptions() {
     return [
@@ -160,4 +178,5 @@ class LibsynEmbedFormatter extends FormatterBase {
       'render_playlist' => $this->t('Render playlist'),
     ];
   }
+
 }
