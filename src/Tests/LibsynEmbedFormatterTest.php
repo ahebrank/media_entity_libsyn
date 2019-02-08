@@ -3,6 +3,7 @@
 namespace Drupal\media_entity_libsyn\Tests;
 
 use Drupal\simpletest\WebTestBase;
+use Drupal\Tests\media\Traits\MediaTypeCreationTrait;
 
 /**
  * Tests for Libsyn embed formatter.
@@ -11,7 +12,7 @@ use Drupal\simpletest\WebTestBase;
  */
 class LibsynEmbedFormatterTest extends WebTestBase {
 
-  use MediaTestTrait;
+  use MediaTypeCreationTrait;
 
   /**
    * Modules to enable.
@@ -20,7 +21,7 @@ class LibsynEmbedFormatterTest extends WebTestBase {
    */
   public static $modules = [
     'media_entity_libsyn',
-    'media_entity',
+    'media',
     'node',
     'field_ui',
     'views_ui',
@@ -38,19 +39,18 @@ class LibsynEmbedFormatterTest extends WebTestBase {
   /**
    * The test media bundle.
    *
-   * @var \Drupal\media_entity\MediaBundleInterface
+   * @var \Drupal\media\MediaBundleInterface
    */
   protected $bundle;
 
   /**
-   * @inheritDoc
+   * {@inheritdoc}
    */
   protected function setUp() {
     parent::setUp();
 
     // Create a test libsyn media bundle.
-    $bundle['bundle'] = 'libsyn';
-    $this->bundle = $this->drupalCreateMediaBundle($bundle, 'libsyn');
+    $this->bundle = $this->createMediaType('libsyn');
 
     // Create an admin user with permissions to administer and create media.
     $this->adminUser = $this->drupalCreateUser([
