@@ -2,7 +2,6 @@
 
 namespace Drupal\media_entity_libsyn\Tests;
 
-use Drupal\media_entity\Tests\MediaTestTrait;
 use Drupal\simpletest\WebTestBase;
 
 /**
@@ -19,7 +18,7 @@ class LibsynEmbedFormatterTest extends WebTestBase {
    *
    * @var array
    */
-  public static $modules = array(
+  public static $modules = [
     'media_entity_libsyn',
     'media_entity',
     'node',
@@ -27,7 +26,7 @@ class LibsynEmbedFormatterTest extends WebTestBase {
     'views_ui',
     'block',
     'link',
-  );
+  ];
 
   /**
    * The test user.
