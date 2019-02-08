@@ -4,4 +4,4 @@ description: Media entity Libsyn provider.
 core: 8.x
 package: Media
 dependencies:
-  - media_entity
+  - drupal:media (>= 8.4)

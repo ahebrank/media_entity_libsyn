@@ -5,8 +5,7 @@ namespace Drupal\media_entity_libsyn\Plugin\Field\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\media_entity\MediaTypeInterface;
-use Drupal\media_entity_libsyn\Plugin\MediaEntity\Type\Libsyn;
+use Drupal\media_entity_libsyn\Plugin\media\Source\Libsyn;
 
 /**
  * Plugin implementation of the 'libsyn_embed' formatter.
@@ -137,14 +136,14 @@ class LibsynEmbedFormatter extends FormatterBase {
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
-    /** @var \Drupal\media_entity\MediaInterface $media_entity */
+    /* @var \Drupal\media\MediaInterface $media_entity */
     $media_entity = $items->getEntity();
 
     $element = [];
-    if (($type = $media_entity->getType()) && $type instanceof Libsyn) {
-      /** @var \Drupal\media_entity\MediaTypeInterface $item */
+    if (($type = $media_entity->getSource()) && $type instanceof Libsyn) {
+      /* @var \Drupal\media\MediaSourceInterface $item */
       foreach ($items as $delta => $item) {
-        if ($episode_id = $type->getField($media_entity, 'episode_id')) {
+        if ($episode_id = $type->getMetadata($media_entity, 'episode_id')) {
           $element[$delta] = [
             '#theme' => 'media_libsyn_embed',
             '#episode_id' => $episode_id,
