@@ -6,7 +6,6 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
-use Drupal\Core\Form\FormStateInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use GuzzleHttp\ClientInterface;
