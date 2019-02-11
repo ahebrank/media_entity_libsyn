@@ -7,12 +7,8 @@ media_entity_libsyn.settings:
       label: 'Destination for thumbnails'
 
 media.source.libsyn:
-  type: mapping
+  type: media.source.field_aware
   label: 'Libsyn type configuration'
-  mapping:
-    source_url_field:
-      type: string
-      label: 'Field on the media entity that stores Libsyn URL'
 
 field.formatter.settings.libsyn_embed:
   type: mapping

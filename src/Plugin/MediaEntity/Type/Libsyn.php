@@ -17,10 +17,9 @@ use DOMDocument;
  *
  * @MediaSource(
  *   id = "libsyn",
- *   label = @Translation("Libsyn"),
+ *   label = @Translation("Libsyn Podcast"),
  *   description = @Translation("Provides business logic and metadata for Libsyn."),
- *   allowed_field_types = {"string_long"},
- *   thumbnail_alt_metadata_attribute = "alt",
+ *   allowed_field_types = {"link", "string", "string_long"},
  *   default_thumbnail_filename = "libsyn.png"
  * )
  */
@@ -131,23 +130,23 @@ class Libsyn extends MediaSourceBase {
   }
 
   /**
-   * Returns the episode id from the source_url_field.
+   * Returns the episode id from the source_field.
    *
    * @param \Drupal\media_entity\MediaInterface $media
    *   The media entity.
    *
    * @return string|bool
-   *   The episode if from the source_url_field if found. False otherwise.
+   *   The episode if from the source_field if found. False otherwise.
    */
   protected function getMediaUrl(MediaInterface $media) {
     if (isset($this->configuration['source_field'])) {
-      $source_url_field = $this->configuration['source_field'];
+      $source_field = $this->configuration['source_field'];
 
-      if ($media->hasField($source_url_field)) {
-        if (!empty($media->{$source_url_field}->first())) {
-          $property_name = $media->{$source_url_field}->first()
+      if ($media->hasField($source_field)) {
+        if (!empty($media->{$source_field}->first())) {
+          $property_name = $media->{$source_field}->first()
             ->mainPropertyName();
-          return $media->{$source_url_field}->{$property_name};
+          return $media->{$source_field}->{$property_name};
         }
       }
     }
