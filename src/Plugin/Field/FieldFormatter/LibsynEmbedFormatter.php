@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\media_entity_libsyn\Plugin\Field\FieldFormatter;
+namespace Drupal\media_entity_libsyn\Plugin\field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;

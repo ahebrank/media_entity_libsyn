@@ -3,10 +3,6 @@
 namespace Drupal\Tests\media_entity_libsyn\Functional;
 
 use Drupal\Tests\media\Functional\MediaFunctionalTestBase;
-use Drupal\node\Entity\Node;
-use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Tests\field_ui\Traits\FieldUiTestTrait;
 
 /**
@@ -68,7 +64,6 @@ class LibsynEmbedFormatterTest extends MediaFunctionalTestBase {
     /* @var $entity_type_manager \Drupal\Core\Entity\EntityTypeManagerInterface */
     $entity_type_manager = $this->container->get('entity_type.manager');
     $assert = $this->assertSession();
-    $session = $this->getSession();
 
     // Assert that the media bundle has the expected values before proceeding.
     $this->drupalGet('admin/structure/media/manage/' . $this->bundle->id());
