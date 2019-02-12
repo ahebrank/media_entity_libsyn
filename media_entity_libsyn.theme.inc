@@ -12,7 +12,7 @@
  */
 function template_preprocess_media_libsyn_embed(&$variables) {
   // Build the embed url.
-  $url = 'https:////html5-player.libsyn.com/embed/episode/id/' . $variables['episode_id'];
+  $url = 'https://html5-player.libsyn.com/embed/episode/id/' . $variables['episode_id'];
 
   foreach ([
     'embed_theme' => 'theme',
