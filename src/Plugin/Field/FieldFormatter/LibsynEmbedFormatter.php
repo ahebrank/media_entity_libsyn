@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\media_entity_libsyn\Plugin\field\FieldFormatter;
+namespace Drupal\media_entity_libsyn\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
@@ -30,7 +30,14 @@ class LibsynEmbedFormatter extends FormatterBase {
       'custom_color' => '87A93A',
       'theme' => 'custom',
       'direction' => 'forward',
-      'options' => [],
+      'options' => [
+        'autonext' => '',
+        'thumbnail' => 'thumbnail',
+        'autoplay' => '',
+        'preload' => '',
+        'no_addthis' => '',
+        'render_playlist' => '',
+      ],
     ] + parent::defaultSettings();
   }
 
@@ -120,14 +127,17 @@ class LibsynEmbedFormatter extends FormatterBase {
       $this->t('Height: @height', [
         '@height' => $this->getSetting('height'),
       ]),
+      $this->t('Theme: @theme', [
+        '@theme' => $this->getSetting('theme'),
+      ]),
+      $this->t('Custom color: @color', [
+        '@color' => $this->getSetting('custom_color'),
+      ]),
     ];
 
-    $options = $this->getSetting('options');
-    if (count($options)) {
-      $summary[] = $this->t('Options: @options', [
-        '@options' => implode(', ', array_intersect_key($this->getEmbedOptions(), array_flip($this->getSetting('options')))),
-      ]);
-    }
+    $summary[] = $this->t('Options: @options', [
+      '@options' => implode(', ', array_intersect_key($this->getEmbedOptions(), array_flip($this->getSetting('options')))),
+    ]);
 
     return $summary;
   }
