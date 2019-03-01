@@ -6,6 +6,8 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
+use Drupal\Core\Logger\LoggerChannelTrait;
+use Drupal\Component\Utility\Crypt;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use GuzzleHttp\ClientInterface;
@@ -20,10 +22,13 @@ use DOMDocument;
  *   label = @Translation("Libsyn Podcast"),
  *   description = @Translation("Provides business logic and metadata for Libsyn."),
  *   allowed_field_types = {"link", "string", "string_long"},
- *   default_thumbnail_filename = "libsyn.png"
+ *   default_thumbnail_filename = "libsyn.png",
+ *   default_name_metadata_attribute = @Translation("Podcast")
  * )
  */
 class Libsyn extends MediaSourceBase {
+
+  use LoggerChannelTrait;
 
   /**
    * Libsyn data.
@@ -47,19 +52,27 @@ class Libsyn extends MediaSourceBase {
   protected $httpClient;
 
   /**
+   * Our channel logger.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, ClientInterface $http_client) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->configFactory = $config_factory;
     $this->httpClient = $http_client;
+    $this->logger = $this->getLogger('media_entity_libsyn');
   }
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static(
+    $source = new static(
       $configuration,
       $plugin_id,
       $plugin_definition,
@@ -69,6 +82,8 @@ class Libsyn extends MediaSourceBase {
       $container->get('config.factory'),
       $container->get('http_client')
     );
+    $source->setLoggerFactory($container->get('logger.factory'));
+    return $source;
   }
 
   /**
@@ -78,7 +93,7 @@ class Libsyn extends MediaSourceBase {
     return [
       'episode_id' => $this->t('The episode id'),
       'html' => $this->t('HTML embed code'),
-      'thumbnail_uri' => t('URI of the thumbnail'),
+      'thumbnail_uri' => $this->t('URI of the thumbnail')
     ];
   }
 
@@ -88,26 +103,9 @@ class Libsyn extends MediaSourceBase {
   public function getMetadata(MediaInterface $media, $name) {
     if (($url = $this->getMediaUrl($media)) && ($data = $this->getData($url))) {
       switch ($name) {
-        case 'html':
-          return $data['html'];
-
         case 'thumbnail_uri':
-          if (isset($data['thumbnail_url'])) {
-            $destination = $this->configFactory->get('media_entity_libsyn.settings')->get('thumbnail_destination');
-            $parsed_url = parse_url($data['thumbnail_url']);
-            $local_uri = $destination . '/' . pathinfo($parsed_url['path'], PATHINFO_BASENAME);
-
-            // Save the file if it does not exist.
-            if (!file_exists($local_uri)) {
-              file_prepare_directory($destination, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
-
-              $image = file_get_contents($data['thumbnail_url']);
-              file_unmanaged_save_data($image, $local_uri, FILE_EXISTS_REPLACE);
-
-              return $local_uri;
-            }
-          }
-          return parent::getMetadata($media, $name);
+          $local_uri = isset($data['thumbnail_url']) ? $this->getLocalThumbnailUri($data['thumbnail_url']) : NULL;
+          return $local_uri ? $local_uri : parent::getMetadata($media, 'thumbnail_url');
 
         case 'episode_id':
           // Extract the src attribute from the html code.
@@ -123,6 +121,9 @@ class Libsyn extends MediaSourceBase {
           }
 
           return $matches[1];
+
+        case 'html':
+          return isset($data[$name]) ? $data[$name] : '';
       }
     }
 
@@ -154,18 +155,18 @@ class Libsyn extends MediaSourceBase {
   }
 
   /**
-   * Returns oembed data for a Soundcloud url.
+   * Returns data for the podcast.
    *
    * @param string $url
-   *   The Libsyn Url.
+   *   The Libsyn URL. This is the URL to the page on libsyn.com where you can
+   *   listen to a podcast episode.
    *
    * @return array
    *   An array of embed data.
    */
   protected function getData($url) {
-    $this->libsyn = &drupal_static(__FUNCTION__);
-
     if (!isset($this->libsyn)) {
+      /* @var $response Psr\Http\Message\ResponseInterface */
       $response = $this->httpClient->get($url);
       $data = (string) $response->getBody();
 
@@ -181,18 +182,89 @@ class Libsyn extends MediaSourceBase {
         }
       }
 
-      // Thumbnail.
+      // Attributes.
       $nodes = $dom->getElementsByTagName('meta');
       foreach ($nodes as $node) {
         $property = $node->getAttribute('property');
-        if ($property == 'og:image') {
-          $this->libsyn['thumbnail_url'] = $node->getAttribute('content');
-          // $this->libsyn['thumbnail_url'] = str_replace("http://", "https://", $this->libsyn['thumbnail_url']);
+        switch ($property) {
+          case 'og:image':
+            // Remove the query string from the image URL.
+            $this->libsyn['thumbnail_url'] = strtok($node->getAttribute('content'), '?');
+            continue;
         }
       }
     }
 
     return $this->libsyn;
+  }
+
+  /**
+   * Returns the local URI for a thumbnail.
+   *
+   * If the thumbnail is not already locally stored, this method will attempt
+   * to download it.
+   *
+   * Appropriated from the OEmbed plugin.
+   *
+   * @param string $remote_thumbnail_url
+   *   The URL to the remote thumbnail image.
+   *
+   * @return string|null
+   *   The local thumbnail URI, or NULL if it could not be downloaded, or if the
+   *   resource has no thumbnail at all.
+   */
+  protected function getLocalThumbnailUri($remote_thumbnail_url) {
+    // If there is no remote thumbnail, there's nothing for us to fetch here.
+    if (!$remote_thumbnail_url) {
+      return NULL;
+    }
+
+    // Compute the local thumbnail URI, regardless of whether or not it exists.
+    $configuration = $this->getConfiguration();
+    $directory = $this->configFactory->get('media_entity_libsyn.settings')->get('thumbnail_destination');
+    // Libsyn uses PNG files, but the files don't have extensions.
+    $extension = pathinfo($remote_thumbnail_url, PATHINFO_EXTENSION);
+    if (empty($extension)) {
+      $extension = 'png';
+    }
+    $local_thumbnail_uri = "$directory/" . Crypt::hashBase64($remote_thumbnail_url) . '.' . $extension;
+
+    // If the local thumbnail already exists, return its URI.
+    if (file_exists($local_thumbnail_uri)) {
+      return $local_thumbnail_uri;
+    }
+
+    // The local thumbnail doesn't exist yet, so try to download it. First,
+    // ensure that the destination directory is writable, and if it's not,
+    // log an error and bail out.
+    if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+      $this->logger->warning('Could not prepare thumbnail destination directory @dir for Libsyn Podcast media.', [
+        '@dir' => $directory,
+      ]);
+      return NULL;
+    }
+
+    $error_message = 'Could not download remote thumbnail from {url}.';
+    $error_context = [
+      'url' => $remote_thumbnail_url,
+    ];
+    try {
+      $response = $this->httpClient->get($remote_thumbnail_url);
+      if ($response->getStatusCode() === 200) {
+        $success = file_unmanaged_save_data((string) $response->getBody(), $local_thumbnail_uri, FILE_EXISTS_REPLACE);
+
+        if ($success) {
+          return $local_thumbnail_uri;
+        }
+        else {
+          $this->logger->warning($error_message, $error_context);
+        }
+      }
+    }
+    catch (RequestException $e) {
+      $this->logger->warning($e->getMessage());
+    }
+    return NULL;
   }
 
 }
