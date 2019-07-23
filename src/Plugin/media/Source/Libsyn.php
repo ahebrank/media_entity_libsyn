@@ -91,6 +91,8 @@ class Libsyn extends MediaSourceBase {
    */
   public function getMetadataAttributes() {
     return [
+      'podcast_date' => $this->t('Date of the podcast as a string'),
+      'podcast_date_date' => $this->t('Date of the podcast for date fields'),
       'episode_id' => $this->t('The episode id'),
       'html' => $this->t('HTML embed code'),
       'thumbnail_uri' => $this->t('URI of the thumbnail')
@@ -124,6 +126,13 @@ class Libsyn extends MediaSourceBase {
 
         case 'html':
           return isset($data[$name]) ? $data[$name] : '';
+
+        case 'podcast_date':
+          return $data['podcast_date'];
+
+        case 'podcast_date_date':
+          $date = new \DateTime($data['podcast_date']);
+          return $date->format('Y-m-d');
       }
     }
 
@@ -192,6 +201,14 @@ class Libsyn extends MediaSourceBase {
             $this->libsyn['thumbnail_url'] = strtok($node->getAttribute('content'), '?');
             continue;
         }
+      }
+
+      // Date.
+      $this->libsyn['podcast_date'] = '';
+      $xpath = new \DOMXPath($dom);
+      $nodes = $xpath->query("//p[contains(concat(' ', normalize-space(@class), ' '), ' date ')]");
+      foreach ($nodes as $date_node) {
+        $this->libsyn['podcast_date'] = $date_node->textContent;
       }
     }
 
