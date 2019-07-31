@@ -199,7 +199,7 @@ class Libsyn extends MediaSourceBase {
           case 'og:image':
             // Remove the query string from the image URL.
             $this->libsyn['thumbnail_url'] = strtok($node->getAttribute('content'), '?');
-            continue;
+            break;
         }
       }
 
