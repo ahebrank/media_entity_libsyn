@@ -6,6 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Logger\LoggerChannelTrait;
 use Drupal\Component\Utility\Crypt;
 use Drupal\media\MediaInterface;
@@ -59,13 +60,21 @@ class Libsyn extends MediaSourceBase {
   protected $logger;
 
   /**
+   * The file system service.
+   *
+   * @var \Drupal\Core\File\FileSystemInterface
+   */
+  protected $fileSystem;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, ClientInterface $http_client) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, ClientInterface $http_client, FileSystemInterface $file_system = NULL) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->configFactory = $config_factory;
     $this->httpClient = $http_client;
     $this->logger = $this->getLogger('media_entity_libsyn');
+    $this->fileSystem = $file_system;
   }
 
   /**
@@ -80,7 +89,8 @@ class Libsyn extends MediaSourceBase {
       $container->get('entity_field.manager'),
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
-      $container->get('http_client')
+      $container->get('http_client'),
+      $container->get('file_system')
     );
     $source->setLoggerFactory($container->get('logger.factory'));
     return $source;
@@ -254,7 +264,7 @@ class Libsyn extends MediaSourceBase {
     // The local thumbnail doesn't exist yet, so try to download it. First,
     // ensure that the destination directory is writable, and if it's not,
     // log an error and bail out.
-    if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+    if (!$this->fileSystem->prepareDirectory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
       $this->logger->warning('Could not prepare thumbnail destination directory @dir for Libsyn Podcast media.', [
         '@dir' => $directory,
       ]);
@@ -268,7 +278,7 @@ class Libsyn extends MediaSourceBase {
     try {
       $response = $this->httpClient->get($remote_thumbnail_url);
       if ($response->getStatusCode() === 200) {
-        $success = file_unmanaged_save_data((string) $response->getBody(), $local_thumbnail_uri, FILE_EXISTS_REPLACE);
+        $success = $this->fileSystem->saveData((string) $response->getBody(), $local_thumbnail_uri, FILE_EXISTS_REPLACE);
 
         if ($success) {
           return $local_thumbnail_uri;
